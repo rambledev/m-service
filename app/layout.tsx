@@ -12,7 +12,7 @@ const notoSansThai = Noto_Sans_Thai({
 export const metadata: Metadata = {
   title: "m-service | ระบบแจ้งซ่อมภายในมหาวิทยาลัย",
   description: "ระบบแจ้งซ่อมภายในมหาวิทยาลัย (Demo Prototype)",
-  icons: { icon: "/logo_rmu.png" },
+  icons: { icon: "/logo-service.png" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

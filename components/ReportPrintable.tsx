@@ -34,11 +34,11 @@ export default function ReportPrintable({ data }: { data: ReportData }) {
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo_rmu.png"
-          alt="ตราสัญลักษณ์มหาวิทยาลัยราชภัฏมหาสารคาม"
+          src="/logo-service.png"
+          alt="โลโก้ระบบแจ้งซ่อม ฝ่ายงานอาคารและสถานที่ มหาวิทยาลัยราชภัฏมหาสารคาม"
           width={56}
           height={56}
-          style={{ borderRadius: "50%", flexShrink: 0 }}
+          style={{ objectFit: "contain", flexShrink: 0 }}
         />
         <div>
           <h1 style={{ fontSize: 22, margin: 0, color: "#111111" }}>

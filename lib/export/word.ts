@@ -50,17 +50,17 @@ function summaryLine(label: string, value: string | number): Paragraph {
   });
 }
 
-// Best-effort fetch of the university seal for the document letterhead — the export still
+// Best-effort fetch of the system logo for the document letterhead — the export still
 // succeeds without it (e.g. if the asset is ever missing), just without the logo image.
 async function loadLogoImageRun(): Promise<ImageRun | null> {
   try {
-    const res = await fetch("/logo_rmu.png");
+    const res = await fetch("/logo-service.png");
     if (!res.ok) return null;
     const data = await res.arrayBuffer();
     return new ImageRun({
       type: "png",
       data,
-      transformation: { width: 64, height: 64 },
+      transformation: { width: 64, height: 62 },
     });
   } catch (error) {
     console.error("[wordExport][loadLogoImageRun] ERROR", { error });

@@ -1,0 +1,71 @@
+# Usage:
+#   docker compose up -d --build        # start PostgreSQL + the Next.js app
+#   docker compose run --rm migrate     # apply Prisma migrations, then seed the database
+#   docker compose logs -f app
+#   docker compose down                 # add -v to also drop the database volume
+#
+# Credentials come from .env (POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB / POSTGRES_PORT —
+# see the comment above DATABASE_URL in .env). The app/migrate containers connect to the "db"
+# service over the compose network (db:5432), not via DATABASE_URL from .env directly — that one
+# points at localhost:${POSTGRES_PORT}, which only makes sense from the host machine.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-mydb}
+    ports:
+      - "${POSTGRES_PORT:-8025}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-mydb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-mydb}?schema=public
+      NODE_ENV: production
+      # Passed through from .env for app/api/notify-technicians/route.ts. Unset is fine — the
+      # route responds with a clear "SMTP not configured" error instead of silently failing.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      NOTIFY_OVERRIDE_EMAIL: ${NOTIFY_OVERRIDE_EMAIL:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # One-off container for `prisma migrate deploy` + `prisma db seed`. Not started by
+  # `docker compose up` (see profiles) — run it explicitly:
+  #   docker compose run --rm migrate
+  # Targets the `builder` stage (has the Prisma CLI + prisma/ source), unlike the slim `app` image.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-mydb}?schema=public
+    command: sh -c "npm run db:deploy && npm run db:seed"
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["tools"]
+
+volumes:
+  db_data:

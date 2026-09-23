@@ -1,0 +1,162 @@
+// m-service — ระบบแจ้งซ่อมภายในมหาวิทยาลัย
+// Schema นี้ mirror โครงสร้างข้อมูลเดิมที่ใช้ใน mock/*.ts และ lib/types.ts ทุกประการ
+// เพื่อให้เมื่อเชื่อมต่อฐานข้อมูลจริง สามารถแทนที่ localStorage ด้วย Prisma Client
+// โดยที่ shape ของข้อมูลฝั่ง UI (Ticket, User, TicketEvent, TicketImage) ไม่ต้องเปลี่ยน
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ตรงกับ Role ใน lib/types.ts
+enum Role {
+  REQUESTER
+  TECHNICIAN
+  ADMIN
+}
+
+// ตรงกับ Priority ใน lib/types.ts
+enum Priority {
+  NORMAL
+  URGENT
+  CRITICAL
+}
+
+// ตรงกับ TicketStatus ใน lib/types.ts
+enum TicketStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// ตรงกับ TicketEventType ใน lib/types.ts — ใช้บันทึก StatusTimeline
+enum TicketEventType {
+  CREATED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ASSIGNED
+  NOTE
+}
+
+// ผู้ใช้งานระบบทั้ง 3 บทบาท (ผู้แจ้งซ่อม / ช่างซ่อม / Admin)
+// ตรงกับ mock/users.ts — id ที่ seed ไว้ เช่น "u-req-1", "u-tech-1" ถูกกำหนดตรง ๆ (ไม่ใช้ cuid) เพื่อให้อ้างอิงจาก Ticket ได้ตรงกับ Demo Flow เดิม
+model User {
+  id         String   @id
+  name       String
+  role       Role
+  department String?
+  phone      String?
+  // รายชื่อ Category ที่ช่างถนัด (เทียบเท่า `expertise?: string[]` ใน lib/types.ts) — เก็บเป็น CategoryId
+  expertise  String[] @default([])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  ticketsRequested Ticket[]      @relation("TicketRequester")
+  ticketsAssigned  Ticket[]      @relation("TicketTechnician")
+  ticketEvents     TicketEvent[] @relation("TicketEventActor")
+
+  @@index([role])
+}
+
+// ประเภทงานซ่อม 8 หมวด ตรงกับ mock/categories.ts
+model Category {
+  id       String @id // เช่น "electric", "aircon" ตรงกับ CategoryId ใน lib/types.ts
+  label    String // ป้ายภาษาไทย เช่น "งานไฟฟ้า"
+  icon     String // emoji ที่ใช้แสดงผล
+  colorVar String // ชื่อ CSS variable สำหรับสี เช่น "--cat-electric"
+
+  tickets Ticket[]
+}
+
+// รายการแจ้งซ่อม 1 ใบ ตรงกับ interface Ticket ใน lib/types.ts
+model Ticket {
+  // เลขที่ใบแจ้งซ่อมรูปแบบ "MS-2569-00001" ใช้เป็น Primary Key โดยตรง
+  // (สร้างด้วย generateTicketId(seq, createdAt) — ดู lib/ticket-utils.ts)
+  id  String @id
+  // ลำดับที่ใช้สร้างเลขที่ใบแจ้งซ่อม — แอปฝั่ง client จะอ่านค่ามากสุดปัจจุบัน +1 เพื่อออกเลขถัดไป
+  seq Int    @unique
+
+  title String // สรุปสั้น ๆ (ตัดมาจาก detail)
+
+  // ข้อมูลผู้แจ้ง — เก็บ snapshot ชื่อ/หน่วยงาน/เบอร์โทรไว้เสมอ แม้ requesterId จะไม่ผูกกับ User ที่ลงทะเบียนไว้ก็ตาม
+  requesterId   String?
+  requester     User?   @relation("TicketRequester", fields: [requesterId], references: [id], onDelete: SetNull)
+  requesterName String
+  department    String
+  phone         String
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  building String
+  floor    String
+  room     String
+  detail   String @db.Text
+
+  priority Priority
+  status   TicketStatus @default(PENDING)
+
+  // ช่างผู้รับผิดชอบ — เก็บ snapshot ชื่อไว้ด้วยเพื่อให้ประวัติ/Timeline อ่านได้แม้จะมอบหมายช่างใหม่ภายหลัง
+  technicianId   String?
+  technician     User?   @relation("TicketTechnician", fields: [technicianId], references: [id], onDelete: SetNull)
+  technicianName String?
+
+  repairNote String? @db.Text // หมายเหตุการซ่อมตอนปิดงาน
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ข้อมูลตอนยกเลิกรายการ (ผู้ยกเลิก / วันเวลา / เหตุผล)
+  cancelReason String?
+  cancelledBy  String?
+  cancelledAt  DateTime?
+
+  images  TicketImage[]
+  history TicketEvent[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([requesterId])
+  @@index([technicianId])
+}
+
+// รูปภาพที่แนบมากับใบแจ้งซ่อม ตรงกับ TicketImage ใน lib/types.ts
+model TicketImage {
+  id       String @id @default(cuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  name String // ชื่อไฟล์เดิม
+  url  String // ที่อยู่ไฟล์ (เช่น URL บน object storage เมื่อเชื่อมต่อจริง)
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+// เหตุการณ์ใน StatusTimeline ของแต่ละใบแจ้งซ่อม ตรงกับ TicketEvent ใน lib/types.ts
+model TicketEvent {
+  id       String @id @default(cuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  type      TicketEventType
+  timestamp DateTime        @default(now())
+
+  // ผู้ทำรายการ — เก็บ snapshot ชื่อไว้เสมอ (actorId อาจเป็น null ได้ เช่นกรณี seed ข้อมูลเก่า)
+  actorId   String?
+  actor     User?   @relation("TicketEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorName String
+
+  note String? @db.Text // หมายเหตุประกอบ เช่น หมายเหตุการซ่อม หรือเหตุผลการยกเลิก
+
+  @@index([ticketId])
+}

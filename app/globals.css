@@ -1,26 +1,110 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --surface-1: #fcfcfb;
+  --surface-2: #ffffff;
+  --page-plane: #f5f6f8;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --border-hairline: rgba(11, 11, 11, 0.1);
+  --gridline: #e1e0d9;
+
+  --brand-primary: #184f95;
+  --brand-primary-hover: #10396f;
+  --brand-primary-soft: #e8f0fb;
+
+  --surface-sidebar: #f8f9fb;
+
+  --status-good: #0ca30c;
+  --status-good-soft: #e7f7e7;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+  --status-critical-soft: #fbe9e9;
+  --status-pending: #898781;
+  --status-accepted: #2a78d6;
+  --status-progress: #eda100;
+  --status-progress-soft: #fdf1e0;
+  --status-completed: #0ca30c;
+  --status-cancelled: #d03b3b;
+
+  --cat-electric: #2a78d6;
+  --cat-plumbing: #eb6834;
+  --cat-aircon: #1baf7a;
+  --cat-building: #eda100;
+  --cat-computer: #e87ba4;
+  --cat-elevator: #008300;
+  --cat-equipment: #4a3aa7;
+  --cat-other: #e34948;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-page-plane: var(--page-plane);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border-hairline: var(--border-hairline);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-primary-soft: var(--brand-primary-soft);
+  --font-sans: var(--font-thai-sans);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--page-plane);
+  color: var(--text-primary);
+  font-family: var(--font-thai-sans), "Noto Sans Thai", system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+}
+
+* {
+  border-color: var(--border-hairline);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gridline);
+  border-radius: 999px;
+}
+
+/* Consistent keyboard-focus affordance across every interactive element. */
+:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }

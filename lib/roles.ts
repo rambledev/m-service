@@ -7,6 +7,7 @@ import { Role } from "@/lib/types";
 export const roleByEmail: Record<string, Role> = {
   "techodev.2024@gmail.com": "admin",
   "sakolsupa.te@rmu.ac.th": "admin",
+  "marvin.pu@rmu.ac.th": "admin",
   "techo@rmu.ac.th": "requester",
   "cc.claude3@rmu.ac.th": "technician",
 };

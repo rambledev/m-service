@@ -10,6 +10,7 @@ import StatusTimeline from "@/components/StatusTimeline";
 import StatusBadge from "@/components/StatusBadge";
 import PriorityBadge from "@/components/PriorityBadge";
 import CancelTicketModal from "@/components/CancelTicketModal";
+import ImageGallery from "@/components/ImageGallery";
 import { useApp } from "@/context/AppContext";
 import { getCategory } from "@/mock/categories";
 import { formatLocation, formatThaiDateTime } from "@/lib/ticket-utils";
@@ -112,36 +113,14 @@ function DetailInner() {
           {ticket.images.length > 0 && (
             <div className="mt-5 border-t pt-5" style={{ borderColor: "var(--border-hairline)" }}>
               <p className="mb-2 text-sm text-[var(--text-muted)]">รูปภาพที่แนบตอนแจ้งซ่อม</p>
-              <div className="flex flex-wrap gap-3">
-                {ticket.images.map((img) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={img.name}
-                    src={img.url}
-                    alt={img.name}
-                    className="h-20 w-20 rounded-lg border object-cover"
-                    style={{ borderColor: "var(--border-hairline)" }}
-                  />
-                ))}
-              </div>
+              <ImageGallery images={ticket.images} />
             </div>
           )}
 
           {ticket.repairImages && ticket.repairImages.length > 0 && (
             <div className="mt-5 border-t pt-5" style={{ borderColor: "var(--border-hairline)" }}>
               <p className="mb-2 text-sm text-[var(--text-muted)]">รูปภาพหลังซ่อม</p>
-              <div className="flex flex-wrap gap-3">
-                {ticket.repairImages.map((img) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={img.name}
-                    src={img.url}
-                    alt={img.name}
-                    className="h-20 w-20 rounded-lg border object-cover"
-                    style={{ borderColor: "var(--border-hairline)" }}
-                  />
-                ))}
-              </div>
+              <ImageGallery images={ticket.repairImages} />
             </div>
           )}
         </div>

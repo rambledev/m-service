@@ -2,6 +2,7 @@ import { Check, X } from "lucide-react";
 import { Ticket, TicketStatus } from "@/lib/types";
 import { formatThaiDateTime, timelineSteps } from "@/lib/ticket-utils";
 import { statusIcon } from "@/lib/status-icons";
+import ImageGallery from "@/components/ImageGallery";
 
 const statusOrder: TicketStatus[] = ["pending", "accepted", "in_progress", "completed"];
 
@@ -77,17 +78,8 @@ export default function StatusTimeline({ ticket }: { ticket: Ticket }) {
                 </p>
               )}
               {event?.images && event.images.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {event.images.map((img) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={img.name}
-                      src={img.url}
-                      alt={img.name}
-                      className="h-16 w-16 rounded-lg border object-cover"
-                      style={{ borderColor: "var(--border-hairline)" }}
-                    />
-                  ))}
+                <div className="mt-2">
+                  <ImageGallery images={event.images} thumbClassName="h-16 w-16 object-cover" />
                 </div>
               )}
             </div>

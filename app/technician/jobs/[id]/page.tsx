@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import EmptyState from "@/components/EmptyState";
+import ImageGallery from "@/components/ImageGallery";
 import ImageUploader from "@/components/ImageUploader";
 import StatusTimeline from "@/components/StatusTimeline";
 import StatusBadge from "@/components/StatusBadge";
@@ -110,17 +111,8 @@ export default function TechnicianJobDetailPage() {
           </dl>
 
           {ticket.images.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-3 border-t pt-5" style={{ borderColor: "var(--border-hairline)" }}>
-              {ticket.images.map((img) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={img.name}
-                  src={img.url}
-                  alt={img.name}
-                  className="h-20 w-20 rounded-lg border object-cover"
-                  style={{ borderColor: "var(--border-hairline)" }}
-                />
-              ))}
+            <div className="mt-5 border-t pt-5" style={{ borderColor: "var(--border-hairline)" }}>
+              <ImageGallery images={ticket.images} />
             </div>
           )}
         </div>

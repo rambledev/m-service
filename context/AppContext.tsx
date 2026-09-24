@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
-import { CategoryId, Ticket, TicketImage, User } from "@/lib/types";
+import { CategoryId, Role, Ticket, TicketImage, User } from "@/lib/types";
 import {
   acceptTicketAction,
   assignTechnicianAction,
@@ -24,6 +24,7 @@ import {
   type AcceptTicketResult,
   type NewTicketInput,
 } from "@/app/actions/tickets";
+import { setUserRoleAction } from "@/app/actions/users";
 
 export type { NewTicketInput, AcceptTicketResult };
 
@@ -38,6 +39,7 @@ interface AppContextValue {
   logout: () => void;
   users: User[];
   getTechnicians: () => User[];
+  setUserRole: (email: string, role: Role) => Promise<User>;
   tickets: Ticket[];
   getTicket: (id: string) => Ticket | undefined;
   createTicket: (input: NewTicketInput) => Promise<Ticket>;
@@ -161,6 +163,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const getTechnicians = useCallback(() => users.filter((u) => u.role === "technician"), [users]);
 
+  const setUserRole = useCallback(async (email: string, role: Role) => {
+    const user = await setUserRoleAction(email, role);
+    setUsers((prev) => {
+      const idx = prev.findIndex((u) => u.id === user.id);
+      if (idx === -1) return [...prev, user];
+      const next = [...prev];
+      next[idx] = user;
+      return next;
+    });
+    return user;
+  }, []);
+
   const value = useMemo<AppContextValue>(
     () => ({
       currentUser,
@@ -168,6 +182,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       logout,
       users,
       getTechnicians,
+      setUserRole,
       tickets,
       getTicket,
       createTicket,
@@ -184,6 +199,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       logout,
       users,
       getTechnicians,
+      setUserRole,
       tickets,
       getTicket,
       createTicket,

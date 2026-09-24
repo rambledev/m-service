@@ -12,7 +12,7 @@ import {
   User,
 } from "@/lib/types";
 
-const roleFromDb: Record<DbRole, Role> = {
+export const roleFromDb: Record<DbRole, Role> = {
   REQUESTER: "requester",
   TECHNICIAN: "technician",
   ADMIN: "admin",

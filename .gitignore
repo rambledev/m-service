@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# uploaded ticket photos (app/api/upload/route.ts) — served from public/uploads, backed by a
+# Coolify Persistent Volume in production; never meant to be committed.
+/public/uploads/*
+!/public/uploads/.gitkeep

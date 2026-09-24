@@ -35,6 +35,7 @@ export default function TechnicianJobDetailPage() {
   const [note, setNote] = useState("");
   const [noteError, setNoteError] = useState("");
   const [completionImages, setCompletionImages] = useState<TicketImage[]>([]);
+  const [completionImagesUploading, setCompletionImagesUploading] = useState(false);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
@@ -184,6 +185,7 @@ export default function TechnicianJobDetailPage() {
               images={completionImages}
               onChange={setCompletionImages}
               maxImages={MAX_COMPLETION_IMAGES}
+              onUploadingChange={setCompletionImagesUploading}
             />
 
             <button
@@ -192,13 +194,18 @@ export default function TechnicianJobDetailPage() {
                   setNoteError("กรุณาระบุหมายเหตุการซ่อม");
                   return;
                 }
+                if (completionImagesUploading) {
+                  setNoteError("กรุณารอให้อัปโหลดรูปภาพเสร็จก่อน");
+                  return;
+                }
                 try {
                   await completeTicket(ticket.id, note.trim(), completionImages);
                 } catch (err) {
                   setNoteError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
                 }
               }}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md"
+              disabled={completionImagesUploading}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md disabled:opacity-60"
               style={{ backgroundColor: "var(--status-good)" }}
             >
               <CheckCircle2 className="h-4 w-4" aria-hidden />

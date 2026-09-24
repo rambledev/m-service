@@ -17,3 +17,7 @@ npm-debug.log*
 
 .vscode
 .idea
+
+# uploaded ticket photos never belong in the image — production reads/writes them through a
+# Coolify Persistent Volume mounted over public/uploads at runtime, not at build time.
+public/uploads

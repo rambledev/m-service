@@ -52,6 +52,7 @@ export default function RepairForm({
   const [detail, setDetail] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
   const [images, setImages] = useState<TicketImage[]>([]);
+  const [imagesUploading, setImagesUploading] = useState(false);
   const [error, setError] = useState("");
 
   function handleSubmit(e: FormEvent) {
@@ -62,6 +63,10 @@ export default function RepairForm({
     }
     if (!detail.trim()) {
       setError("กรุณาระบุรายละเอียดปัญหา");
+      return;
+    }
+    if (imagesUploading) {
+      setError("กรุณารอให้อัปโหลดรูปภาพเสร็จก่อน");
       return;
     }
     setError("");
@@ -217,7 +222,7 @@ export default function RepairForm({
 
       <section>
         <SectionHeader icon={ImageIcon}>แนบรูปภาพ</SectionHeader>
-        <ImageUploader images={images} onChange={setImages} />
+        <ImageUploader images={images} onChange={setImages} onUploadingChange={setImagesUploading} />
       </section>
 
       {error && (
@@ -229,7 +234,14 @@ export default function RepairForm({
         </p>
       )}
 
-      <Button type="submit" loading={submitting} icon={Send} size="md" className="sm:self-start sm:px-8">
+      <Button
+        type="submit"
+        loading={submitting}
+        disabled={imagesUploading}
+        icon={Send}
+        size="md"
+        className="sm:self-start sm:px-8"
+      >
         ส่งแจ้งซ่อม
       </Button>
     </form>

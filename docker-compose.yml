@@ -44,8 +44,18 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
       NOTIFY_OVERRIDE_EMAIL: ${NOTIFY_OVERRIDE_EMAIL:-}
+      # Required for Google sign-in — see the comments above these in .env. Without them every
+      # login fails the same way it did in production before these were set in Coolify.
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:?Set AUTH_GOOGLE_ID in .env}
+      AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:?Set AUTH_GOOGLE_SECRET in .env}
+      AUTH_URL: ${AUTH_URL:-}
     ports:
       - "3000:3000"
+    volumes:
+      # Persistent home for uploaded ticket photos (app/api/upload/route.ts) — the Coolify
+      # equivalent is a Persistent Volume mounted at the same container path, /app/public/uploads.
+      - uploads_data:/app/public/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -69,3 +79,4 @@ services:
 
 volumes:
   db_data:
+  uploads_data:

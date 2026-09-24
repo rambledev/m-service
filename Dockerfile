@@ -35,9 +35,14 @@ RUN apk add --no-cache libc6-compat openssl && \
     addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Mount point for uploaded ticket photos (app/api/upload/route.ts) — a Coolify Persistent
+# Volume should be bound here so files survive redeploys. Pre-created and chowned now so the
+# non-root `nextjs` user can write into it once a volume is mounted over it at container start.
+RUN mkdir -p ./public/uploads && chown nextjs:nodejs ./public/uploads
 
 USER nextjs
 EXPOSE 3000

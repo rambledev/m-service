@@ -1,34 +1,59 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { UploadCloud, X } from "lucide-react";
+import { Loader2, UploadCloud, X } from "lucide-react";
 import { TicketImage } from "@/lib/types";
 
 interface ImageUploaderProps {
   images: TicketImage[];
   onChange: (images: TicketImage[]) => void;
   maxImages?: number;
+  // Optional — lets the parent form disable its submit button while an upload is still in
+  // flight, so a ticket can never be created/completed referencing a not-yet-saved image.
+  onUploadingChange?: (uploading: boolean) => void;
 }
 
-export default function ImageUploader({ images, onChange, maxImages }: ImageUploaderProps) {
+export default function ImageUploader({ images, onChange, maxImages, onUploadingChange }: ImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
+  const [uploadingCount, setUploadingCount] = useState(0);
   const reachedMax = maxImages !== undefined && images.length >= maxImages;
 
-  function handleFiles(files: FileList | null) {
+  async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
-    const incoming: TicketImage[] = Array.from(files).map((file) => ({
-      name: file.name,
-      url: URL.createObjectURL(file),
-    }));
-    const combined = [...images, ...incoming];
+    const incoming = Array.from(files);
 
-    if (maxImages !== undefined && combined.length > maxImages) {
+    const allowedCount = maxImages !== undefined ? Math.max(0, maxImages - images.length) : incoming.length;
+    const toUpload = incoming.slice(0, allowedCount);
+    if (incoming.length > allowedCount) {
       setError(`แนบรูปภาพได้สูงสุด ${maxImages} รูป`);
-      onChange(combined.slice(0, maxImages));
     } else {
       setError("");
-      onChange(combined);
+    }
+    if (toUpload.length === 0) return;
+
+    setUploadingCount((c) => c + toUpload.length);
+    onUploadingChange?.(true);
+    try {
+      const formData = new FormData();
+      for (const file of toUpload) formData.append("files", file);
+
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setError(data.message ?? "อัปโหลดรูปภาพไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+        return;
+      }
+
+      const uploaded: TicketImage[] = data.images;
+      onChange([...images, ...uploaded]);
+    } catch (err) {
+      console.error("[ImageUploader][handleFiles] ERROR", { error: err });
+      setError("อัปโหลดรูปภาพไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่อีกครั้ง");
+    } finally {
+      setUploadingCount((c) => Math.max(0, c - toUpload.length));
+      onUploadingChange?.(false);
     }
   }
 
@@ -36,6 +61,8 @@ export default function ImageUploader({ images, onChange, maxImages }: ImageUplo
     setError("");
     onChange(images.filter((img) => img.name !== name));
   }
+
+  const isUploading = uploadingCount > 0;
 
   return (
     <div>
@@ -45,7 +72,7 @@ export default function ImageUploader({ images, onChange, maxImages }: ImageUplo
         accept="image/*"
         multiple
         onChange={(e) => {
-          handleFiles(e.target.files);
+          void handleFiles(e.target.files);
           e.target.value = "";
         }}
         className="hidden"
@@ -53,13 +80,21 @@ export default function ImageUploader({ images, onChange, maxImages }: ImageUplo
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        disabled={reachedMax}
+        disabled={reachedMax || isUploading}
         className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-6 text-center transition hover:border-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[var(--gridline)]"
         style={{ borderColor: "var(--gridline)" }}
       >
-        <UploadCloud className="h-6 w-6" style={{ color: "var(--text-muted)" }} aria-hidden />
+        {isUploading ? (
+          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--brand-primary)" }} aria-hidden />
+        ) : (
+          <UploadCloud className="h-6 w-6" style={{ color: "var(--text-muted)" }} aria-hidden />
+        )}
         <span className="text-sm font-medium text-[var(--text-secondary)]">
-          {reachedMax ? "แนบรูปภาพครบตามจำนวนแล้ว" : "คลิกเพื่อเลือกรูปภาพ"}
+          {isUploading
+            ? `กำลังอัปโหลด ${uploadingCount} รูป...`
+            : reachedMax
+              ? "แนบรูปภาพครบตามจำนวนแล้ว"
+              : "คลิกเพื่อเลือกรูปภาพ"}
         </span>
         <span className="text-xs text-[var(--text-muted)]">
           {maxImages !== undefined

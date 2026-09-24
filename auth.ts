@@ -1,6 +1,8 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { roleForEmail } from "@/lib/roles";
+import { prisma } from "@/lib/prisma";
+import { roleToDb } from "@/lib/data/tickets";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
@@ -16,7 +18,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user }) {
       const role = roleForEmail(user.email);
       console.log("[auth][signIn]", { email: user.email, allowed: !!role });
-      return !!role;
+      if (!role || !user.email) return false;
+
+      // Guarantees a real User row exists (id = email) before any ticket ever references it as
+      // requesterId/technicianId — without this, a brand-new account's first "แจ้งซ่อมใหม่" would
+      // fail its foreign key constraint.
+      const name = user.name ?? user.email;
+      await prisma.user.upsert({
+        where: { id: user.email },
+        create: { id: user.email, name, role: roleToDb[role] },
+        update: { name, role: roleToDb[role] },
+      });
+
+      return true;
     },
     async jwt({ token }) {
       if (token.email) {

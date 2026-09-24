@@ -33,7 +33,8 @@ function DetailInner() {
   }
 
   const category = getCategory(ticket.categoryId);
-  const canCancel = !["completed", "cancelled"].includes(ticket.status);
+  const canCancel =
+    !["completed", "cancelled"].includes(ticket.status) && ticket.requesterId === currentUser?.id;
 
   return (
     <AppShell role="requester" title="รายละเอียดการแจ้งซ่อม">
@@ -146,9 +147,8 @@ function DetailInner() {
       {showCancel && (
         <CancelTicketModal
           onClose={() => setShowCancel(false)}
-          onConfirm={(reason) => {
-            cancelTicket(ticket.id, reason, currentUser?.name ?? "ผู้แจ้งซ่อม");
-            setShowCancel(false);
+          onConfirm={async (reason) => {
+            await cancelTicket(ticket.id, reason);
           }}
         />
       )}

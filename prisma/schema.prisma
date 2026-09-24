@@ -128,11 +128,25 @@ model Ticket {
   @@index([technicianId])
 }
 
+// ประเภทรูปภาพ — แยก "แนบตอนแจ้งซ่อม" ออกจาก "แนบตอนปิดงาน" โดยไม่ต้องมี column ซ้ำซ้อน:
+// repairImages ที่ UI ต้องการ derive จากรูปที่ผูกกับ TicketEvent ประเภท "completed" ตอน query
+enum TicketImageKind {
+  ATTACHED
+  REPAIR
+}
+
 // รูปภาพที่แนบมากับใบแจ้งซ่อม ตรงกับ TicketImage ใน lib/types.ts
 model TicketImage {
   id       String @id @default(cuid())
   ticketId String
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  kind TicketImageKind @default(ATTACHED)
+
+  // เมื่อ kind = REPAIR รูปนี้จะผูกกับ TicketEvent (เหตุการณ์ "completed") ที่แนบมาด้วย
+  // เพื่อให้ StatusTimeline แสดงรูปประกอบแต่ละขั้นตอนได้ตรงกับ event.images ใน lib/types.ts
+  eventId String?
+  event   TicketEvent? @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   name String // ชื่อไฟล์เดิม
   url  String // ที่อยู่ไฟล์ (เช่น URL บน object storage เมื่อเชื่อมต่อจริง)
@@ -140,6 +154,7 @@ model TicketImage {
   createdAt DateTime @default(now())
 
   @@index([ticketId])
+  @@index([eventId])
 }
 
 // เหตุการณ์ใน StatusTimeline ของแต่ละใบแจ้งซ่อม ตรงกับ TicketEvent ใน lib/types.ts
@@ -157,6 +172,8 @@ model TicketEvent {
   actorName String
 
   note String? @db.Text // หมายเหตุประกอบ เช่น หมายเหตุการซ่อม หรือเหตุผลการยกเลิก
+
+  images TicketImage[]
 
   @@index([ticketId])
 }

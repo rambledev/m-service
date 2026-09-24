@@ -8,11 +8,29 @@ export default function CancelTicketModal({
   onConfirm,
   onClose,
 }: {
-  onConfirm: (reason: string) => void;
+  onConfirm: (reason: string) => Promise<void>;
   onClose: () => void;
 }) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleConfirm() {
+    if (!reason.trim()) {
+      setError("กรุณาระบุเหตุผล");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      await onConfirm(reason.trim());
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ยกเลิกรายการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div
@@ -41,6 +59,7 @@ export default function CancelTicketModal({
           onChange={(e) => setReason(e.target.value)}
           placeholder="เช่น แจ้งซ้ำ, แก้ไขได้เองแล้ว"
           autoFocus
+          disabled={submitting}
         />
         {error && (
           <p className="mt-2 text-sm" style={{ color: "var(--status-critical)" }}>
@@ -48,19 +67,10 @@ export default function CancelTicketModal({
           </p>
         )}
         <div className="mt-5 flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>
             ปิด
           </Button>
-          <Button
-            variant="dangerSolid"
-            onClick={() => {
-              if (!reason.trim()) {
-                setError("กรุณาระบุเหตุผล");
-                return;
-              }
-              onConfirm(reason.trim());
-            }}
-          >
+          <Button variant="dangerSolid" onClick={handleConfirm} loading={submitting}>
             ยืนยันยกเลิก
           </Button>
         </div>

@@ -6,36 +6,31 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
 import { CategoryId, Ticket, TicketImage, User } from "@/lib/types";
-import { generateTicketId } from "@/lib/ticket-utils";
-import { buildInitialTickets, SEED_COUNT } from "@/mock/tickets";
-import { getCategory } from "@/mock/categories";
-import { initialUsers } from "@/mock/users";
+import {
+  acceptTicketAction,
+  assignTechnicianAction,
+  cancelTicketAction,
+  completeTicketAction,
+  createTicketAction,
+  fetchTicketsAction,
+  fetchUsersAction,
+  startProgressAction,
+  updateCategoryAction,
+  type AcceptTicketResult,
+  type NewTicketInput,
+} from "@/app/actions/tickets";
 
-const USERS_STORAGE_KEY = "mservice_users_v1";
-const TICKETS_STORAGE_KEY = "mservice_tickets_v1";
-const SEQ_STORAGE_KEY = "mservice_seq_v1";
+export type { NewTicketInput, AcceptTicketResult };
 
-export type NewTicketInput = Pick<
-  Ticket,
-  | "requesterName"
-  | "department"
-  | "phone"
-  | "categoryId"
-  | "building"
-  | "floor"
-  | "room"
-  | "detail"
-  | "priority"
-> & { images: TicketImage[] };
-
-export interface AcceptTicketResult {
-  success: boolean;
-  message: string;
-}
+// Cross-tab/device visibility used to come from a `storage` event trick over localStorage —
+// now that tickets live in Postgres, a short poll is the DB-appropriate equivalent (good enough
+// without standing up a WebSocket layer nobody asked for).
+const POLL_INTERVAL_MS = 20_000;
 
 interface AppContextValue {
   currentUser: User | null;
@@ -45,108 +40,52 @@ interface AppContextValue {
   getTechnicians: () => User[];
   tickets: Ticket[];
   getTicket: (id: string) => Ticket | undefined;
-  createTicket: (input: NewTicketInput) => Ticket;
-  acceptTicket: (ticketId: string, technician: User) => AcceptTicketResult;
-  startProgress: (ticketId: string) => void;
-  completeTicket: (ticketId: string, note: string, images?: TicketImage[]) => void;
-  assignTechnician: (ticketId: string, technicianId: string) => void;
-  updateCategory: (ticketId: string, categoryId: CategoryId) => void;
-  cancelTicket: (ticketId: string, reason: string, actorName: string) => void;
+  createTicket: (input: NewTicketInput) => Promise<Ticket>;
+  acceptTicket: (ticketId: string) => Promise<AcceptTicketResult>;
+  startProgress: (ticketId: string) => Promise<void>;
+  completeTicket: (ticketId: string, note: string, images?: TicketImage[]) => Promise<void>;
+  assignTechnician: (ticketId: string, technicianId: string) => Promise<void>;
+  updateCategory: (ticketId: string, categoryId: CategoryId) => Promise<void>;
+  cancelTicket: (ticketId: string, reason: string) => Promise<Ticket>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const [users, setUsers] = useState<User[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [nextSeq, setNextSeq] = useState<number>(SEED_COUNT + 1);
-  const [isStorageHydrated, setIsStorageHydrated] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    try {
-      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      const storedTickets = localStorage.getItem(TICKETS_STORAGE_KEY);
-      const storedSeq = localStorage.getItem(SEQ_STORAGE_KEY);
-
-      // Reading localStorage (an external system) is only possible after mount,
-      // so hydrating React state here is the sanctioned exception to this rule.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUsers(storedUsers ? JSON.parse(storedUsers) : initialUsers);
-      setTickets(storedTickets ? JSON.parse(storedTickets) : buildInitialTickets());
-      setNextSeq(storedSeq ? Number(storedSeq) : SEED_COUNT + 1);
-    } catch {
-      setUsers(initialUsers);
-      setTickets(buildInitialTickets());
-    } finally {
-      setIsStorageHydrated(true);
-    }
+  const refetch = useCallback(async () => {
+    const [nextTickets, nextUsers] = await Promise.all([fetchTicketsAction(), fetchUsersAction()]);
+    setTickets(nextTickets);
+    setUsers(nextUsers);
   }, []);
 
   useEffect(() => {
-    if (!isStorageHydrated) return;
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-  }, [users, isStorageHydrated]);
+    if (status !== "authenticated") return;
+    let cancelled = false;
 
-  useEffect(() => {
-    if (!isStorageHydrated) return;
-    localStorage.setItem(TICKETS_STORAGE_KEY, JSON.stringify(tickets));
-  }, [tickets, isStorageHydrated]);
-
-  // Cross-tab realtime sync: the `storage` event fires in every OTHER tab/window of this
-  // origin (never the tab that made the write) whenever localStorage changes — this is what
-  // lets "รับงาน" detect a job another technician just accepted in a different tab, without
-  // a real backend/websocket. Same-tab updates are already covered by React state directly.
-  useEffect(() => {
-    function handleStorage(e: StorageEvent) {
-      if (e.newValue === null) return;
-      if (e.key === TICKETS_STORAGE_KEY) {
-        try {
-          console.log("[AppContext][handleStorage] syncing tickets from another tab");
-          setTickets(JSON.parse(e.newValue));
-        } catch (error) {
-          console.error("[AppContext][handleStorage] ERROR", { key: e.key, error });
-        }
-      } else if (e.key === USERS_STORAGE_KEY) {
-        try {
-          setUsers(JSON.parse(e.newValue));
-        } catch (error) {
-          console.error("[AppContext][handleStorage] ERROR", { key: e.key, error });
-        }
-      }
-    }
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
-
-  useEffect(() => {
-    if (!isStorageHydrated) return;
-    localStorage.setItem(SEQ_STORAGE_KEY, String(nextSeq));
-  }, [nextSeq, isStorageHydrated]);
-
-  // Upsert this session's real Google display name into the users directory the first time
-  // we see it, so "จัดการผู้ใช้งาน" and technician-assignment dropdowns show real names instead
-  // of the raw email placeholder — sticks in localStorage from then on for everyone.
-  useEffect(() => {
-    if (!isStorageHydrated) return;
-    const email = session?.user?.id;
-    const realName = session?.user?.name;
-    if (!email || !realName) return;
-    // Syncing from the external NextAuth session (only known post-mount/post-sign-in) is the
-    // same sanctioned exception as the hydration effect above.
+    // Initial data load from the server (an external system) is only possible once the session
+    // is authenticated — the sanctioned exception to this rule.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUsers((prev) => {
-      const idx = prev.findIndex((u) => u.id === email);
-      if (idx === -1 || prev[idx].name === realName) return prev;
-      const next = [...prev];
-      next[idx] = { ...next[idx], name: realName };
-      return next;
-    });
-  }, [isStorageHydrated, session?.user?.id, session?.user?.name]);
+    refetch()
+      .catch((error) => console.error("[AppContext][initialLoad] ERROR", { error }))
+      .finally(() => {
+        if (!cancelled) setIsDataLoaded(true);
+      });
+
+    pollRef.current = setInterval(() => {
+      refetch().catch((error) => console.error("[AppContext][poll] ERROR", { error }));
+    }, POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [status, refetch]);
 
   const currentUser = useMemo<User | null>(() => {
     if (!session?.user?.id) return null;
@@ -160,246 +99,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   }, [session, users]);
 
-  const isHydrated = isStorageHydrated && status !== "loading";
+  const isHydrated = status !== "loading" && (status !== "authenticated" || isDataLoaded);
 
   const logout = useCallback(() => {
     void nextAuthSignOut({ callbackUrl: "/login" });
   }, []);
 
-  const getTicket = useCallback(
-    (id: string) => tickets.find((t) => t.id === id),
-    [tickets]
-  );
+  const getTicket = useCallback((id: string) => tickets.find((t) => t.id === id), [tickets]);
 
-  const createTicket = useCallback(
-    (input: NewTicketInput) => {
-      const created = new Date();
-      const ticket: Ticket = {
-        id: generateTicketId(nextSeq, created),
-        title: input.detail.slice(0, 60),
-        requesterName: input.requesterName,
-        department: input.department,
-        phone: input.phone,
-        categoryId: input.categoryId,
-        building: input.building,
-        floor: input.floor,
-        room: input.room,
-        detail: input.detail,
-        priority: input.priority,
-        images: input.images,
-        status: "pending",
-        createdAt: created.toISOString(),
-        updatedAt: created.toISOString(),
-        history: [
-          {
-            id: `${created.getTime()}-created`,
-            type: "created",
-            timestamp: created.toISOString(),
-            actor: input.requesterName,
-          },
-        ],
-      };
-      setTickets((prev) => [ticket, ...prev]);
-      setNextSeq((n) => n + 1);
-      return ticket;
-    },
-    [nextSeq]
-  );
-
-  const updateTicket = useCallback(
-    (ticketId: string, updater: (ticket: Ticket) => Ticket) => {
-      setTickets((prev) =>
-        prev.map((t) => (t.id === ticketId ? updater(t) : t))
-      );
-    },
-    []
-  );
-
-  const acceptTicket = useCallback((ticketId: string, technician: User): AcceptTicketResult => {
-    console.log("[AppContext][acceptTicket] START", { ticketId, technicianId: technician.id });
-
-    // Read localStorage directly rather than trusting this tab's React state: localStorage
-    // writes are synchronous and immediately visible to any other tab that reads them, but the
-    // `storage` *event* that keeps React state in sync can lag by a tick or two. Basing the
-    // pending-check on the live storage snapshot (not just in-memory state) closes that race
-    // window — this is the "realtime" guard against two technicians both accepting the same job.
-    let authoritative: Ticket[];
-    try {
-      const raw = localStorage.getItem(TICKETS_STORAGE_KEY);
-      authoritative = raw ? JSON.parse(raw) : tickets;
-    } catch (error) {
-      console.error("[AppContext][acceptTicket] ERROR reading localStorage, falling back to state", {
-        error,
-      });
-      authoritative = tickets;
-    }
-
-    let result: AcceptTicketResult = { success: false, message: "ไม่พบรายการนี้ในระบบ" };
-
-    const next = authoritative.map((t): Ticket => {
-      if (t.id !== ticketId) return t;
-
-      if (t.status !== "pending") {
-        result = {
-          success: false,
-          message: t.technicianName
-            ? `รับงานไม่สำเร็จ: ${t.technicianName} รับงานนี้ไปแล้ว`
-            : "รับงานไม่สำเร็จ: สถานะของงานนี้เปลี่ยนไปแล้ว",
-        };
-        return t;
-      }
-
-      result = { success: true, message: `รับงาน ${t.id} สำเร็จ` };
-      return {
-        ...t,
-        status: "accepted",
-        technicianId: technician.id,
-        technicianName: technician.name,
-        updatedAt: nowIso(),
-        history: [
-          ...t.history,
-          {
-            id: `${Date.now()}-accepted`,
-            type: "accepted",
-            timestamp: nowIso(),
-            actor: technician.name,
-          },
-        ],
-      };
+  function upsertTicket(ticket: Ticket) {
+    setTickets((prev) => {
+      const idx = prev.findIndex((t) => t.id === ticket.id);
+      if (idx === -1) return [ticket, ...prev];
+      const next = [...prev];
+      next[idx] = ticket;
+      return next;
     });
+  }
 
-    // Sync React state to the authoritative snapshot even on failure — if this tab's UI was
-    // stale (hadn't yet received the `storage` event from whichever tab got there first), this
-    // corrects it immediately so the "รับงาน" button reflects reality right away.
-    setTickets(next);
+  const createTicket = useCallback(async (input: NewTicketInput) => {
+    const ticket = await createTicketAction(input);
+    upsertTicket(ticket);
+    return ticket;
+  }, []);
 
-    console.log("[AppContext][acceptTicket] END", { ticketId, result });
+  const acceptTicket = useCallback(async (ticketId: string) => {
+    console.log("[AppContext][acceptTicket] START", { ticketId });
+    const result = await acceptTicketAction(ticketId);
+    // The action always returns the ticket's current state (win or lose), so this tab's UI
+    // reflects reality immediately even when another technician got there first.
+    if (result.ticket) upsertTicket(result.ticket);
+    console.log("[AppContext][acceptTicket] END", { ticketId, success: result.success });
     return result;
-  }, [tickets]);
+  }, []);
 
-  const startProgress = useCallback(
-    (ticketId: string) => {
-      updateTicket(ticketId, (t) => ({
-        ...t,
-        status: "in_progress",
-        updatedAt: nowIso(),
-        history: [
-          ...t.history,
-          {
-            id: `${Date.now()}-progress`,
-            type: "in_progress",
-            timestamp: nowIso(),
-            actor: t.technicianName ?? "",
-          },
-        ],
-      }));
-    },
-    [updateTicket]
-  );
+  const startProgress = useCallback(async (ticketId: string) => {
+    const ticket = await startProgressAction(ticketId);
+    upsertTicket(ticket);
+  }, []);
 
-  const completeTicket = useCallback(
-    (ticketId: string, note: string, images: TicketImage[] = []) => {
-      updateTicket(ticketId, (t) => ({
-        ...t,
-        status: "completed",
-        repairNote: note,
-        repairImages: images,
-        updatedAt: nowIso(),
-        history: [
-          ...t.history,
-          {
-            id: `${Date.now()}-completed`,
-            type: "completed",
-            timestamp: nowIso(),
-            actor: t.technicianName ?? "",
-            note,
-            images,
-          },
-        ],
-      }));
-    },
-    [updateTicket]
-  );
+  const completeTicket = useCallback(async (ticketId: string, note: string, images: TicketImage[] = []) => {
+    const ticket = await completeTicketAction(ticketId, note, images);
+    upsertTicket(ticket);
+  }, []);
 
-  const assignTechnician = useCallback(
-    (ticketId: string, technicianId: string) => {
-      const technician = users.find((u) => u.id === technicianId);
-      if (!technician) return;
-      updateTicket(ticketId, (t) => ({
-        ...t,
-        status: t.status === "pending" ? "accepted" : t.status,
-        technicianId: technician.id,
-        technicianName: technician.name,
-        updatedAt: nowIso(),
-        history: [
-          ...t.history,
-          {
-            id: `${Date.now()}-assigned`,
-            type: "assigned",
-            timestamp: nowIso(),
-            actor: "ผู้ดูแลระบบ",
-            note: `มอบหมายงานให้ ${technician.name}`,
-          },
-        ],
-      }));
-    },
-    [updateTicket, users]
-  );
+  const assignTechnician = useCallback(async (ticketId: string, technicianId: string) => {
+    const ticket = await assignTechnicianAction(ticketId, technicianId);
+    upsertTicket(ticket);
+  }, []);
 
-  const updateCategory = useCallback(
-    (ticketId: string, categoryId: CategoryId) => {
-      updateTicket(ticketId, (t) => {
-        if (t.categoryId === categoryId) return t;
-        const fromLabel = getCategory(t.categoryId).label;
-        const toLabel = getCategory(categoryId).label;
-        return {
-          ...t,
-          categoryId,
-          updatedAt: nowIso(),
-          history: [
-            ...t.history,
-            {
-              id: `${Date.now()}-note`,
-              type: "note",
-              timestamp: nowIso(),
-              actor: "ผู้ดูแลระบบ",
-              note: `เปลี่ยนประเภทงานจาก "${fromLabel}" เป็น "${toLabel}"`,
-            },
-          ],
-        };
-      });
-    },
-    [updateTicket]
-  );
+  const updateCategory = useCallback(async (ticketId: string, categoryId: CategoryId) => {
+    const ticket = await updateCategoryAction(ticketId, categoryId);
+    upsertTicket(ticket);
+  }, []);
 
-  const cancelTicket = useCallback(
-    (ticketId: string, reason: string, actorName: string) => {
-      updateTicket(ticketId, (t) => ({
-        ...t,
-        status: "cancelled",
-        cancelReason: reason,
-        cancelledBy: actorName,
-        cancelledAt: nowIso(),
-        updatedAt: nowIso(),
-        history: [
-          ...t.history,
-          {
-            id: `${Date.now()}-cancelled`,
-            type: "cancelled",
-            timestamp: nowIso(),
-            actor: actorName,
-            note: reason,
-          },
-        ],
-      }));
-    },
-    [updateTicket]
-  );
+  const cancelTicket = useCallback(async (ticketId: string, reason: string) => {
+    const ticket = await cancelTicketAction(ticketId, reason);
+    upsertTicket(ticket);
+    return ticket;
+  }, []);
 
-  const getTechnicians = useCallback(
-    () => users.filter((u) => u.role === "technician"),
-    [users]
-  );
+  const getTechnicians = useCallback(() => users.filter((u) => u.role === "technician"), [users]);
 
   const value = useMemo<AppContextValue>(
     () => ({

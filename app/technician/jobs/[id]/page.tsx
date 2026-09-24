@@ -10,8 +10,10 @@ import {
   ImageIcon,
   Info,
   PlayCircle,
+  XCircle,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import CancelTicketModal from "@/components/CancelTicketModal";
 import EmptyState from "@/components/EmptyState";
 import ImageGallery from "@/components/ImageGallery";
 import ImageUploader from "@/components/ImageUploader";
@@ -19,6 +21,7 @@ import StatusTimeline from "@/components/StatusTimeline";
 import StatusBadge from "@/components/StatusBadge";
 import PriorityBadge from "@/components/PriorityBadge";
 import Toast, { ToastData } from "@/components/Toast";
+import Button from "@/components/Button";
 import { useApp } from "@/context/AppContext";
 import { getCategory } from "@/mock/categories";
 import { formatLocation, formatThaiDateTime } from "@/lib/ticket-utils";
@@ -28,12 +31,13 @@ const MAX_COMPLETION_IMAGES = 3;
 
 export default function TechnicianJobDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { currentUser, tickets, acceptTicket, startProgress, completeTicket } = useApp();
+  const { currentUser, tickets, acceptTicket, startProgress, completeTicket, cancelTicket } = useApp();
   const [note, setNote] = useState("");
   const [noteError, setNoteError] = useState("");
   const [completionImages, setCompletionImages] = useState<TicketImage[]>([]);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [accepting, setAccepting] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
 
   const ticket = tickets.find((t) => t.id === id);
 
@@ -48,19 +52,18 @@ export default function TechnicianJobDetailPage() {
   const category = getCategory(ticket.categoryId);
   const isMine = ticket.technicianId === currentUser.id;
   const assignedElsewhere = !!ticket.technicianId && !isMine;
+  const canCancel = isMine && !["completed", "cancelled"].includes(ticket.status);
 
   // TS doesn't retain the `!ticket || !currentUser` narrowing above across a nested function
   // boundary, so capture already-narrowed locals for handleAccept to close over.
   const currentTicket = ticket;
-  const technician = currentUser;
 
-  function handleAccept() {
+  async function handleAccept() {
     console.log("[TechnicianJobDetailPage][handleAccept] START", { ticketId: currentTicket.id });
     setAccepting(true);
-    // Re-checked atomically inside acceptTicket against the latest state (including anything
-    // just synced in from another tab), so this is the "realtime" guard against two technicians
-    // both accepting the same pending job.
-    const result = acceptTicket(currentTicket.id, technician);
+    // Re-checked atomically inside acceptTicket (a real DB update guarded by status="pending"),
+    // so this is the "realtime" guard against two technicians both accepting the same job.
+    const result = await acceptTicket(currentTicket.id);
     setToast({ variant: result.success ? "success" : "error", message: result.message });
     setAccepting(false);
     console.log("[TechnicianJobDetailPage][handleAccept] END", { ticketId: currentTicket.id, result });
@@ -184,12 +187,16 @@ export default function TechnicianJobDetailPage() {
             />
 
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (!note.trim()) {
                   setNoteError("กรุณาระบุหมายเหตุการซ่อม");
                   return;
                 }
-                completeTicket(ticket.id, note.trim(), completionImages);
+                try {
+                  await completeTicket(ticket.id, note.trim(), completionImages);
+                } catch (err) {
+                  setNoteError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+                }
               }}
               className="mt-4 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:shadow-md"
               style={{ backgroundColor: "var(--status-good)" }}
@@ -207,7 +214,22 @@ export default function TechnicianJobDetailPage() {
           <h3 className="mb-4 text-sm font-semibold text-[var(--text-secondary)]">ความคืบหน้า</h3>
           <StatusTimeline ticket={ticket} />
         </div>
+
+        {canCancel && (
+          <Button variant="danger" icon={XCircle} onClick={() => setShowCancel(true)} className="self-start">
+            ยกเลิกรายการ
+          </Button>
+        )}
       </div>
+
+      {showCancel && (
+        <CancelTicketModal
+          onClose={() => setShowCancel(false)}
+          onConfirm={async (reason) => {
+            await cancelTicket(ticket.id, reason);
+          }}
+        />
+      )}
     </AppShell>
   );
 }

@@ -62,6 +62,7 @@ export interface TicketImage {
 export interface Ticket {
   id: string;
   title: string;
+  requesterId?: string;
   requesterName: string;
   department: string;
   phone: string;

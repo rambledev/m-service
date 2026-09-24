@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Tags, UserCog } from "lucide-react";
+import { ChevronDown, Tags, UserCog, XCircle } from "lucide-react";
 import { CategoryId, Ticket } from "@/lib/types";
 import { categories, getCategory } from "@/mock/categories";
 import { formatLocation, formatThaiDateTime } from "@/lib/ticket-utils";
 import StatusBadge from "@/components/StatusBadge";
 import PriorityBadge from "@/components/PriorityBadge";
 import StatusTimeline from "@/components/StatusTimeline";
+import ImageGallery from "@/components/ImageGallery";
+import Button from "@/components/Button";
+import CancelTicketModal from "@/components/CancelTicketModal";
 import { useApp } from "@/context/AppContext";
 
 export default function AdminTicketRow({
@@ -18,9 +21,11 @@ export default function AdminTicketRow({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
-  const { assignTechnician, updateCategory, getTechnicians } = useApp();
+  const [showCancel, setShowCancel] = useState(false);
+  const { assignTechnician, updateCategory, cancelTicket, getTechnicians } = useApp();
   const category = getCategory(ticket.categoryId);
   const technicians = getTechnicians();
+  const canCancel = !["completed", "cancelled"].includes(ticket.status);
 
   return (
     <div
@@ -73,6 +78,12 @@ export default function AdminTicketRow({
               <dt className="text-[var(--text-muted)]">แจ้งเมื่อ</dt>
               <dd className="mt-0.5 font-medium">{formatThaiDateTime(ticket.createdAt)}</dd>
             </div>
+            <div>
+              <dt className="text-[var(--text-muted)]">ผู้แจ้ง</dt>
+              <dd className="mt-0.5 font-medium">
+                {ticket.requesterName} · {ticket.department} · {ticket.phone}
+              </dd>
+            </div>
             <div className="sm:col-span-2">
               <dt className="text-[var(--text-muted)]">รายละเอียดปัญหา</dt>
               <dd className="mt-0.5">{ticket.detail}</dd>
@@ -81,6 +92,12 @@ export default function AdminTicketRow({
               <div className="sm:col-span-2">
                 <dt className="text-[var(--text-muted)]">หมายเหตุการซ่อม</dt>
                 <dd className="mt-0.5">{ticket.repairNote}</dd>
+              </div>
+            )}
+            {ticket.images.length > 0 && (
+              <div className="sm:col-span-2">
+                <dt className="mb-2 text-[var(--text-muted)]">รูปภาพที่แนบตอนแจ้งซ่อม</dt>
+                <ImageGallery images={ticket.images} thumbClassName="h-16 w-16 object-cover" />
               </div>
             )}
           </dl>
@@ -135,7 +152,24 @@ export default function AdminTicketRow({
             <h4 className="mb-3 text-sm font-semibold text-[var(--text-secondary)]">ความคืบหน้า</h4>
             <StatusTimeline ticket={ticket} />
           </div>
+
+          {canCancel && (
+            <div className="mt-5 border-t pt-4" style={{ borderColor: "var(--border-hairline)" }}>
+              <Button variant="danger" icon={XCircle} onClick={() => setShowCancel(true)} size="sm">
+                ยกเลิกรายการ
+              </Button>
+            </div>
+          )}
         </div>
+      )}
+
+      {showCancel && (
+        <CancelTicketModal
+          onClose={() => setShowCancel(false)}
+          onConfirm={async (reason) => {
+            await cancelTicket(ticket.id, reason);
+          }}
+        />
       )}
     </div>
   );

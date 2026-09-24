@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Info } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import RepairForm from "@/components/RepairForm";
 import { NewTicketInput, useApp } from "@/context/AppContext";
@@ -12,14 +12,21 @@ export default function CreateTicketPage() {
   const { currentUser, createTicket } = useApp();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(input: NewTicketInput) {
+  async function handleSubmit(input: NewTicketInput) {
     setSubmitting(true);
-    const ticket = createTicket(input);
-    // Fire-and-forget — emailing technicians is a background notification, not something
-    // that should block the requester from reaching their new ticket's detail page.
-    void notifyTechniciansOfNewTicket(ticket);
-    router.push(`/requester/detail/${ticket.id}?created=1`);
+    setError("");
+    try {
+      const ticket = await createTicket(input);
+      // Fire-and-forget — emailing technicians is a background notification, not something
+      // that should block the requester from reaching their new ticket's detail page.
+      void notifyTechniciansOfNewTicket(ticket);
+      router.push(`/requester/detail/${ticket.id}?created=1`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ส่งแจ้งซ่อมไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -34,6 +41,15 @@ export default function CreateTicketPage() {
             กรอกรายละเอียดปัญหาให้ครบถ้วน เพื่อให้เจ้าหน้าที่สามารถดำเนินการได้อย่างรวดเร็ว
           </p>
         </div>
+        {error && (
+          <div
+            className="animate-fade-in mb-6 flex items-start gap-2 rounded-xl border px-4 py-3 text-sm"
+            style={{ borderColor: "var(--status-critical)", backgroundColor: "var(--status-critical-soft)", color: "var(--status-critical)" }}
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            {error}
+          </div>
+        )}
         <RepairForm
           defaultName={currentUser?.name ?? ""}
           defaultDepartment={currentUser?.department ?? ""}

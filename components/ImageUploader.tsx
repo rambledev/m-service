@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Loader2, UploadCloud, X } from "lucide-react";
+import { Camera, ImagePlus, Loader2, X } from "lucide-react";
 import { TicketImage } from "@/lib/types";
+import CameraCapture from "@/components/CameraCapture";
 
 interface ImageUploaderProps {
   images: TicketImage[];
@@ -17,11 +18,11 @@ export default function ImageUploader({ images, onChange, maxImages, onUploading
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const reachedMax = maxImages !== undefined && images.length >= maxImages;
 
-  async function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    const incoming = Array.from(files);
+  async function uploadFiles(incoming: File[]) {
+    if (incoming.length === 0) return;
 
     const allowedCount = maxImages !== undefined ? Math.max(0, maxImages - images.length) : incoming.length;
     const toUpload = incoming.slice(0, allowedCount);
@@ -49,7 +50,7 @@ export default function ImageUploader({ images, onChange, maxImages, onUploading
       const uploaded: TicketImage[] = data.images;
       onChange([...images, ...uploaded]);
     } catch (err) {
-      console.error("[ImageUploader][handleFiles] ERROR", { error: err });
+      console.error("[ImageUploader][uploadFiles] ERROR", { error: err });
       setError("อัปโหลดรูปภาพไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่อีกครั้ง");
     } finally {
       setUploadingCount((c) => Math.max(0, c - toUpload.length));
@@ -63,6 +64,7 @@ export default function ImageUploader({ images, onChange, maxImages, onUploading
   }
 
   const isUploading = uploadingCount > 0;
+  const disabled = reachedMax || isUploading;
 
   return (
     <div>
@@ -72,36 +74,49 @@ export default function ImageUploader({ images, onChange, maxImages, onUploading
         accept="image/*"
         multiple
         onChange={(e) => {
-          void handleFiles(e.target.files);
+          void uploadFiles(Array.from(e.target.files ?? []));
           e.target.value = "";
         }}
         className="hidden"
       />
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={reachedMax || isUploading}
-        className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-6 text-center transition hover:border-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[var(--gridline)]"
-        style={{ borderColor: "var(--gridline)" }}
-      >
-        {isUploading ? (
-          <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--brand-primary)" }} aria-hidden />
-        ) : (
-          <UploadCloud className="h-6 w-6" style={{ color: "var(--text-muted)" }} aria-hidden />
-        )}
-        <span className="text-sm font-medium text-[var(--text-secondary)]">
-          {isUploading
-            ? `กำลังอัปโหลด ${uploadingCount} รูป...`
-            : reachedMax
-              ? "แนบรูปภาพครบตามจำนวนแล้ว"
-              : "คลิกเพื่อเลือกรูปภาพ"}
-        </span>
-        <span className="text-xs text-[var(--text-muted)]">
-          {maxImages !== undefined
-            ? `แนบได้สูงสุด ${maxImages} รูป (${images.length}/${maxImages})`
-            : "รองรับไฟล์ภาพหลายไฟล์"}
-        </span>
-      </button>
+
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled}
+          className="flex flex-1 flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-6 text-center transition hover:border-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[var(--gridline)]"
+          style={{ borderColor: "var(--gridline)" }}
+        >
+          {isUploading ? (
+            <Loader2 className="h-6 w-6 animate-spin" style={{ color: "var(--brand-primary)" }} aria-hidden />
+          ) : (
+            <ImagePlus className="h-6 w-6" style={{ color: "var(--text-muted)" }} aria-hidden />
+          )}
+          <span className="text-sm font-medium text-[var(--text-secondary)]">
+            {isUploading
+              ? `กำลังอัปโหลด ${uploadingCount} รูป...`
+              : reachedMax
+                ? "แนบรูปภาพครบตามจำนวนแล้ว"
+                : "เลือกรูปภาพ"}
+          </span>
+          <span className="text-xs text-[var(--text-muted)]">
+            {maxImages !== undefined ? `สูงสุด ${maxImages} รูป (${images.length}/${maxImages})` : "เลือกได้หลายไฟล์"}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCameraOpen(true)}
+          disabled={disabled}
+          className="flex flex-1 flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-6 text-center transition hover:border-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[var(--gridline)]"
+          style={{ borderColor: "var(--gridline)" }}
+        >
+          <Camera className="h-6 w-6" style={{ color: "var(--text-muted)" }} aria-hidden />
+          <span className="text-sm font-medium text-[var(--text-secondary)]">ถ่ายภาพ</span>
+          <span className="text-xs text-[var(--text-muted)]">ใช้กล้องอุปกรณ์นี้</span>
+        </button>
+      </div>
 
       {error && (
         <p className="animate-fade-in mt-2 text-sm" style={{ color: "var(--status-critical)" }}>
@@ -137,6 +152,13 @@ export default function ImageUploader({ images, onChange, maxImages, onUploading
             </div>
           ))}
         </div>
+      )}
+
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={(file) => void uploadFiles([file])}
+          onClose={() => setCameraOpen(false)}
+        />
       )}
     </div>
   );

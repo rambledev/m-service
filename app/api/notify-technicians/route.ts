@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { getTechnicians } from "@/mock/users";
+import { getAllUsers } from "@/lib/data/tickets";
 import { formatLocation } from "@/lib/ticket-utils";
 
 interface NotifyPayload {
@@ -46,18 +46,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const recipients = getTechnicians()
-    .map((t) => t.email)
+  const users = await getAllUsers();
+  const recipients = users
+    .filter((u) => u.role === "technician")
+    .map((u) => u.email)
     .filter((email): email is string => !!email);
 
   if (recipients.length === 0) {
-    console.error("[api/notify-technicians][POST] ERROR", { reason: "no technician account configured in lib/roles.ts" });
+    console.error("[api/notify-technicians][POST] ERROR", { reason: "no technician accounts in the database" });
     return NextResponse.json({ success: false, message: "ไม่พบอีเมลช่างซ่อมในระบบ" }, { status: 200 });
   }
 
   // Optional override for staging: when set, every notification is redirected to this one
-  // address instead of the real technician account(s) in lib/roles.ts — handy for testing
-  // without paging the actual on-duty technician.
+  // address instead of the real technician account(s) — handy for testing without paging the
+  // actual on-duty technician.
   const override = process.env.NOTIFY_OVERRIDE_EMAIL;
 
   const subject = `[m-service] มีรายการแจ้งซ่อมใหม่ ${payload.ticketId}`;

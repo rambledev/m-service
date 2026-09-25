@@ -4,10 +4,10 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { auth } from "@/auth";
 
-// Saved under public/uploads so Next.js's standalone server serves them directly as static
-// files (no separate Route Handler needed for reads) — in production this directory is a
-// Coolify Persistent Volume mount, so files survive redeploys instead of living only in the
-// container's throwaway filesystem.
+// Saved under public/uploads, but served back through app/api/files/[filename]/route.ts
+// rather than as a plain public/ static asset — see that file for why. In production this
+// directory is a Coolify Persistent Volume mount, so files survive redeploys instead of
+// living only in the container's throwaway filesystem.
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -60,7 +60,9 @@ export async function POST(request: NextRequest) {
         const safeName = `${Date.now()}-${crypto.randomUUID()}${ext}`;
         const bytes = Buffer.from(await file.arrayBuffer());
         await writeFile(path.join(UPLOAD_DIR, safeName), bytes);
-        return { name: file.name, url: `/uploads/${safeName}` };
+        // Served by app/api/files/[filename]/route.ts, not as a plain public/ static asset —
+        // see that file for why a Route Handler is required here.
+        return { name: file.name, url: `/api/files/${safeName}` };
       })
     );
 

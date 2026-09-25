@@ -17,6 +17,7 @@ import {
   cancelTicketAction,
   completeTicketAction,
   createTicketAction,
+  deleteTicketAction,
   fetchTicketsAction,
   fetchUsersAction,
   startProgressAction,
@@ -49,6 +50,7 @@ interface AppContextValue {
   assignTechnician: (ticketId: string, technicianId: string) => Promise<void>;
   updateCategory: (ticketId: string, categoryId: CategoryId) => Promise<void>;
   cancelTicket: (ticketId: string, reason: string) => Promise<Ticket>;
+  deleteTicket: (ticketId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -161,6 +163,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return ticket;
   }, []);
 
+  const deleteTicket = useCallback(async (ticketId: string) => {
+    await deleteTicketAction(ticketId);
+    setTickets((prev) => prev.filter((t) => t.id !== ticketId));
+  }, []);
+
   const getTechnicians = useCallback(() => users.filter((u) => u.role === "technician"), [users]);
 
   const setUserRole = useCallback(async (email: string, role: Role) => {
@@ -192,6 +199,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       assignTechnician,
       updateCategory,
       cancelTicket,
+      deleteTicket,
     }),
     [
       currentUser,
@@ -209,6 +217,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       assignTechnician,
       updateCategory,
       cancelTicket,
+      deleteTicket,
     ]
   );
 

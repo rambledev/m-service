@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Tags, UserCog, XCircle } from "lucide-react";
+import { ChevronDown, Tags, Trash2, UserCog, XCircle } from "lucide-react";
 import { CategoryId, Ticket } from "@/lib/types";
 import { categories, getCategory } from "@/mock/categories";
 import { formatLocation, formatThaiDateTime } from "@/lib/ticket-utils";
@@ -11,6 +11,7 @@ import StatusTimeline from "@/components/StatusTimeline";
 import ImageGallery from "@/components/ImageGallery";
 import Button from "@/components/Button";
 import CancelTicketModal from "@/components/CancelTicketModal";
+import DeleteTicketModal from "@/components/DeleteTicketModal";
 import { useApp } from "@/context/AppContext";
 
 export default function AdminTicketRow({
@@ -22,7 +23,8 @@ export default function AdminTicketRow({
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const [showCancel, setShowCancel] = useState(false);
-  const { assignTechnician, updateCategory, cancelTicket, getTechnicians } = useApp();
+  const [showDelete, setShowDelete] = useState(false);
+  const { assignTechnician, updateCategory, cancelTicket, deleteTicket, getTechnicians } = useApp();
   const category = getCategory(ticket.categoryId);
   const technicians = getTechnicians();
   const canCancel = !["completed", "cancelled"].includes(ticket.status);
@@ -153,13 +155,16 @@ export default function AdminTicketRow({
             <StatusTimeline ticket={ticket} />
           </div>
 
-          {canCancel && (
-            <div className="mt-5 border-t pt-4" style={{ borderColor: "var(--border-hairline)" }}>
+          <div className="mt-5 flex flex-wrap gap-2 border-t pt-4" style={{ borderColor: "var(--border-hairline)" }}>
+            {canCancel && (
               <Button variant="danger" icon={XCircle} onClick={() => setShowCancel(true)} size="sm">
                 ยกเลิกรายการ
               </Button>
-            </div>
-          )}
+            )}
+            <Button variant="dangerSolid" icon={Trash2} onClick={() => setShowDelete(true)} size="sm">
+              ลบรายการ
+            </Button>
+          </div>
         </div>
       )}
 
@@ -168,6 +173,16 @@ export default function AdminTicketRow({
           onClose={() => setShowCancel(false)}
           onConfirm={async (reason) => {
             await cancelTicket(ticket.id, reason);
+          }}
+        />
+      )}
+
+      {showDelete && (
+        <DeleteTicketModal
+          ticketId={ticket.id}
+          onClose={() => setShowDelete(false)}
+          onConfirm={async () => {
+            await deleteTicket(ticket.id);
           }}
         />
       )}

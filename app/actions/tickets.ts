@@ -297,6 +297,24 @@ export async function cancelTicketAction(ticketId: string, reason: string): Prom
   return mapDbTicketToTicket(updated);
 }
 
+// Permanent delete — unlike cancelTicketAction (marks the ticket CANCELLED but keeps the full
+// record/history), this removes the row entirely. TicketImage/TicketEvent cascade per the
+// schema's onDelete: Cascade. Admin-only, any status — the UI backing this must confirm with
+// the admin before calling it, since there is no undo.
+export async function deleteTicketAction(ticketId: string): Promise<void> {
+  const session = await requireSession();
+  if (session.role !== "admin") throw new Error("เฉพาะผู้ดูแลระบบเท่านั้นที่ลบรายการได้");
+
+  console.log("[actions/tickets][deleteTicketAction] START", { ticketId, by: session.id });
+  try {
+    await prisma.ticket.delete({ where: { id: ticketId } });
+  } catch (error) {
+    console.error("[actions/tickets][deleteTicketAction] ERROR", { ticketId, error });
+    throw new Error("ไม่พบรายการนี้ในระบบ หรือลบไม่สำเร็จ");
+  }
+  console.log("[actions/tickets][deleteTicketAction] END", { ticketId });
+}
+
 export async function fetchTicketsAction(): Promise<Ticket[]> {
   await requireSession();
   return getAllTickets();

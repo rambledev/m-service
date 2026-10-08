@@ -8,7 +8,7 @@ export default function ReportPrintable({ data }: { data: ReportData }) {
   const th: CSSProperties = {
     textAlign: "left",
     padding: "8px 10px",
-    background: "#184f95",
+    background: "#b3455f",
     color: "#ffffff",
     fontSize: 12,
     border: "1px solid #d9d9d9",

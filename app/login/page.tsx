@@ -45,8 +45,12 @@ function LoginInner() {
     <div
       className="flex min-h-screen flex-col items-center justify-center px-4 py-12"
       style={{
-        background:
-          "radial-gradient(ellipse 80% 60% at 50% -10%, color-mix(in srgb, var(--brand-primary) 8%, transparent), var(--page-plane) 60%)",
+        background: [
+          "radial-gradient(ellipse 60% 50% at 18% 8%, color-mix(in srgb, var(--status-critical) 10%, transparent), transparent 60%)",
+          "radial-gradient(ellipse 60% 50% at 82% 8%, color-mix(in srgb, var(--status-progress) 12%, transparent), transparent 60%)",
+          "radial-gradient(ellipse 70% 55% at 50% 100%, color-mix(in srgb, var(--status-good) 10%, transparent), transparent 60%)",
+          "var(--page-plane)",
+        ].join(", "),
       }}
     >
       <div className="animate-fade-in flex flex-col items-center text-center">

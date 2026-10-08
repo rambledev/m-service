@@ -33,7 +33,10 @@ export default function AppShell({
 
   if (!isHydrated || !currentUser || currentUser.role !== role) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--page-plane)]">
+      <div
+        data-role={role}
+        className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--page-plane)]"
+      >
         <BrandLogo size={48} />
         <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--brand-primary)" }} aria-hidden />
         <p className="text-sm text-[var(--text-muted)]">กำลังโหลด...</p>
@@ -50,7 +53,7 @@ export default function AppShell({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--page-plane)]">
+    <div data-role={role} className="flex min-h-screen flex-col bg-[var(--page-plane)]">
       <div className="sticky top-0 z-10">
         <Header role={role} title={title} />
         <Suspense fallback={null}>
@@ -93,7 +96,7 @@ function AdminShell({ role, title, children }: { role: Role; title: string; chil
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--page-plane)]">
+    <div data-role={role} className="flex min-h-screen bg-[var(--page-plane)]">
       <Suspense fallback={null}>
         <Sidebar
           role={role}

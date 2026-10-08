@@ -3,40 +3,71 @@
 :root {
   --surface-1: #fcfcfb;
   --surface-2: #ffffff;
-  --page-plane: #f5f6f8;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
-  --border-hairline: rgba(11, 11, 11, 0.1);
-  --gridline: #e1e0d9;
+  --page-plane: #f6f5f8;
+  --text-primary: #262425;
+  --text-secondary: #58534f;
+  --text-muted: #948e87;
+  --border-hairline: rgba(20, 15, 10, 0.09);
+  --gridline: #e7e2db;
 
-  --brand-primary: #184f95;
-  --brand-primary-hover: #10396f;
-  --brand-primary-soft: #e8f0fb;
+  /* Neutral/default accent — only the login page and any role-agnostic surface should ever
+     see this; every page under AppShell gets one of the three role accents below instead via
+     the [data-role] overrides, which the [data-role] selectors win out over this block for. */
+  --brand-primary: #6a5a8c;
+  --brand-primary-hover: #52446e;
+  --brand-primary-soft: #efebf5;
 
-  --surface-sidebar: #f8f9fb;
+  --surface-sidebar: #f9f8fb;
 
-  --status-good: #0ca30c;
-  --status-good-soft: #e7f7e7;
-  --status-warning: #fab219;
-  --status-serious: #ec835a;
-  --status-critical: #d03b3b;
-  --status-critical-soft: #fbe9e9;
-  --status-pending: #898781;
-  --status-accepted: #2a78d6;
-  --status-progress: #eda100;
-  --status-progress-soft: #fdf1e0;
-  --status-completed: #0ca30c;
-  --status-cancelled: #d03b3b;
+  --status-good: #1f9d55;
+  --status-good-soft: #e7f7ed;
+  --status-warning: #e08f1f;
+  --status-serious: #e2714a;
+  --status-critical: #c23b4e;
+  --status-critical-soft: #fbe9ec;
+  --status-pending: #948e87;
+  --status-accepted: #3a6fc4;
+  --status-progress: #d99323;
+  --status-progress-soft: #fbf0df;
+  --status-completed: #1f9d55;
+  --status-cancelled: #c23b4e;
 
-  --cat-electric: #2a78d6;
-  --cat-plumbing: #eb6834;
-  --cat-aircon: #1baf7a;
-  --cat-building: #eda100;
-  --cat-computer: #e87ba4;
-  --cat-elevator: #008300;
-  --cat-equipment: #4a3aa7;
-  --cat-other: #e34948;
+  --cat-electric: #3a6fc4;
+  --cat-plumbing: #d9703a;
+  --cat-aircon: #22a480;
+  --cat-building: #d99323;
+  --cat-computer: #d373a0;
+  --cat-elevator: #2f8f4e;
+  --cat-equipment: #6e5bb0;
+  --cat-other: #c2534f;
+}
+
+/* Role identity accent — applied by AppShell via `data-role` on its root element, so every
+   component that already reads var(--brand-primary)/-hover/-soft re-themes automatically with
+   no per-component changes. Pastel, muted tones chosen to read as calm/institutional rather
+   than alarm-colored, and deliberately a different hue/weight from the functional status colors
+   above (e.g. admin's red is a dustier wine tone, not the same red as --status-critical) so a
+   destructive action still visually stands out against the role's own everyday accent color.
+   Each role also gets a barely-there page-plane tint for ambience without hurting readability. */
+[data-role="admin"] {
+  --brand-primary: #b3455f;
+  --brand-primary-hover: #8f3650;
+  --brand-primary-soft: #fbe9ee;
+  --page-plane: #fcf6f7;
+}
+
+[data-role="technician"] {
+  --brand-primary: #b05d28;
+  --brand-primary-hover: #8a4a1f;
+  --brand-primary-soft: #fdf0e4;
+  --page-plane: #fdf8f3;
+}
+
+[data-role="requester"] {
+  --brand-primary: #357a51;
+  --brand-primary-hover: #285f3f;
+  --brand-primary-soft: #e9f5ee;
+  --page-plane: #f5faf6;
 }
 
 @theme inline {

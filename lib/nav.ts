@@ -26,18 +26,14 @@ export const navByRole: Record<Role, NavItem[]> = {
     { label: "แดชบอร์ด", shortLabel: "แดชบอร์ด", href: "/requester/dashboard", icon: Home },
     { label: "แจ้งซ่อมใหม่", shortLabel: "แจ้งซ่อม", href: "/requester/create", icon: PlusCircle },
     {
-      label: "รายการแจ้งซ่อมของฉัน",
-      shortLabel: "รายการ",
-      href: "/requester/tickets?view=active",
-      icon: ClipboardList,
-      match: (p, s) => p === "/requester/tickets" && s !== "history",
-    },
-    {
+      // Single entry point to app/requester/tickets/page.tsx — its in-page Tabs already toggle
+      // between "รายการของฉัน" (active) and "ประวัติ" (history), so a second top-level nav item
+      // pointing at the same page was pure redundancy.
       label: "ประวัติการแจ้งซ่อม",
       shortLabel: "ประวัติ",
       href: "/requester/tickets?view=history",
       icon: History,
-      match: (p, s) => p === "/requester/tickets" && s === "history",
+      match: (p) => p === "/requester/tickets",
     },
   ],
   technician: [

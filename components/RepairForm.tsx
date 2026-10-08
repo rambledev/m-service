@@ -4,6 +4,7 @@ import { FormEvent, ReactNode, useState } from "react";
 import { FileText, ImageIcon, LucideIcon, MapPin, Send, TriangleAlert, User } from "lucide-react";
 import { CategoryId, Priority, TicketImage } from "@/lib/types";
 import { categories } from "@/mock/categories";
+import { departmentGroups } from "@/lib/departments";
 import { NewTicketInput } from "@/context/AppContext";
 import Button from "@/components/Button";
 import ImageUploader from "@/components/ImageUploader";
@@ -104,12 +105,25 @@ export default function RepairForm({
           </div>
           <div>
             <label className={labelClass}>หน่วยงาน</label>
-            <input
+            <select
               className={fieldClass}
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
               required
-            />
+            >
+              <option value="" disabled>
+                -- เลือกหน่วยงาน --
+              </option>
+              {departmentGroups.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.options.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
           <div>
             <label className={labelClass}>เบอร์โทร</label>

@@ -10,6 +10,7 @@ import TopTabs from "@/components/TopTabs";
 import BottomTabBar from "@/components/BottomTabBar";
 import Sidebar from "@/components/Sidebar";
 import BrandLogo from "@/components/BrandLogo";
+import RoleBackground from "@/components/RoleBackground";
 
 const SIDEBAR_COLLAPSED_KEY = "mservice_admin_sidebar_collapsed_v1";
 
@@ -37,9 +38,12 @@ export default function AppShell({
         data-role={role}
         className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--page-plane)]"
       >
-        <BrandLogo size={48} />
-        <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--brand-primary)" }} aria-hidden />
-        <p className="text-sm text-[var(--text-muted)]">กำลังโหลด...</p>
+        <RoleBackground />
+        <div className="relative flex flex-col items-center gap-4">
+          <BrandLogo size={48} />
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--brand-primary)" }} aria-hidden />
+          <p className="text-sm text-[var(--text-muted)]">กำลังโหลด...</p>
+        </div>
       </div>
     );
   }
@@ -54,13 +58,14 @@ export default function AppShell({
 
   return (
     <div data-role={role} className="flex min-h-screen flex-col bg-[var(--page-plane)]">
+      <RoleBackground />
       <div className="sticky top-0 z-10">
         <Header role={role} title={title} />
         <Suspense fallback={null}>
           <TopTabs role={role} />
         </Suspense>
       </div>
-      <main className="flex-1 px-4 py-6 pb-24 sm:px-6 md:pb-6">{children}</main>
+      <main className="relative flex-1 px-4 py-6 pb-24 sm:px-6 md:pb-6">{children}</main>
       <Suspense fallback={null}>
         <BottomTabBar role={role} />
       </Suspense>
@@ -97,6 +102,7 @@ function AdminShell({ role, title, children }: { role: Role; title: string; chil
 
   return (
     <div data-role={role} className="flex min-h-screen bg-[var(--page-plane)]">
+      <RoleBackground />
       <Suspense fallback={null}>
         <Sidebar
           role={role}
@@ -110,7 +116,7 @@ function AdminShell({ role, title, children }: { role: Role; title: string; chil
         <div className="sticky top-0 z-10">
           <Header role={role} title={title} onMenuClick={() => setMobileOpen(true)} />
         </div>
-        <main className="flex-1 px-4 py-6 sm:px-6">{children}</main>
+        <main className="relative flex-1 px-4 py-6 sm:px-6">{children}</main>
       </div>
     </div>
   );

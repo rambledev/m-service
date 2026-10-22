@@ -43,22 +43,38 @@ function LoginInner() {
 
   return (
     <div
-      className="flex min-h-screen flex-col items-center justify-center px-4 py-12"
-      style={{
-        background: [
-          "radial-gradient(ellipse 60% 50% at 18% 8%, color-mix(in srgb, var(--status-critical) 10%, transparent), transparent 60%)",
-          "radial-gradient(ellipse 60% 50% at 82% 8%, color-mix(in srgb, var(--status-progress) 12%, transparent), transparent 60%)",
-          "radial-gradient(ellipse 70% 55% at 50% 100%, color-mix(in srgb, var(--status-good) 10%, transparent), transparent 60%)",
-          "var(--page-plane)",
-        ].join(", "),
-      }}
+      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-12"
+      style={{ background: "var(--page-plane)" }}
     >
-      <div className="animate-fade-in flex flex-col items-center text-center">
-        <div className="mb-4">
-          <BrandLogo size={64} />
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <div
+          className="absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full blur-3xl"
+          style={{ backgroundColor: "var(--status-critical)", opacity: 0.22 }}
+        />
+        <div
+          className="absolute -right-32 -top-32 h-[30rem] w-[30rem] rounded-full blur-3xl"
+          style={{ backgroundColor: "var(--status-progress)", opacity: 0.24 }}
+        />
+        <div
+          className="absolute -bottom-48 left-1/2 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full blur-3xl"
+          style={{ backgroundColor: "var(--status-good)", opacity: 0.2 }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: "radial-gradient(circle, var(--text-muted) 1.2px, transparent 1.2px)",
+            backgroundSize: "28px 28px",
+            opacity: 0.1,
+          }}
+        />
+      </div>
+
+      <div className="animate-fade-in relative flex flex-col items-center text-center">
+        <div className="mb-5 drop-shadow-sm">
+          <BrandLogo size={128} />
         </div>
-        <h1 className="text-2xl font-semibold text-[var(--text-primary)]">m-service</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">m-service</h1>
+        <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
           ระบบแจ้งซ่อมภายในมหาวิทยาลัย
         </p>
 
@@ -90,7 +106,7 @@ function LoginInner() {
         )}
       </div>
 
-      <p className="mt-10 text-xs text-[var(--text-muted)]">
+      <p className="relative mt-10 text-xs text-[var(--text-muted)]">
         เข้าถึงได้เฉพาะบัญชีที่ได้รับอนุญาตล่วงหน้าเท่านั้น
       </p>
     </div>

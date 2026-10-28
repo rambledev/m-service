@@ -95,8 +95,8 @@ function LoginInner() {
 
       <div className="relative z-10 flex flex-1 flex-col justify-center gap-10 px-6 py-10 lg:flex-row lg:items-center lg:gap-0 lg:px-12">
         <div className="flex flex-col items-center text-center lg:flex-1 lg:items-start lg:text-left">
-          <div className="mb-6 drop-shadow-sm">
-            <BrandLogo size={110} />
+          <div className="mb-8 drop-shadow-sm">
+            <BrandLogo size={220} className="h-32 w-32 lg:h-48 lg:w-48" />
           </div>
           <p className="text-xs font-semibold tracking-[0.2em] text-[var(--brand-primary)]">ระบบแจ้งซ่อม</p>
           <h1 className="mt-2 text-3xl font-bold text-[var(--text-primary)] lg:text-4xl">

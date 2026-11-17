@@ -2,6 +2,7 @@
 
 import { ClipboardList, Inbox, Plus, Wrench } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import LineNotifyCard from "@/components/LineNotifyCard";
 import Button from "@/components/Button";
 import DashboardCard from "@/components/DashboardCard";
 import EmptyState from "@/components/EmptyState";
@@ -37,6 +38,8 @@ export default function RequesterDashboardPage() {
             แจ้งซ่อมใหม่
           </Button>
         </div>
+
+        <LineNotifyCard audience="requester" />
 
         <div className="grid gap-4 sm:grid-cols-3">
           <DashboardCard label="รายการแจ้งซ่อมทั้งหมด" value={myTickets.length} icon={ClipboardList} />

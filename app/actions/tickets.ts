@@ -1,10 +1,12 @@
 "use server";
 
+import { after } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getAllTickets, getAllUsers, mapDbTicketToTicket, priorityToDb, ticketInclude } from "@/lib/data/tickets";
 import { generateTicketId } from "@/lib/ticket-utils";
 import { getCategory } from "@/mock/categories";
+import { lineNewTicket, lineStatusToRequester, lineToTechnician } from "@/lib/ticket-line-notify";
 import { CategoryId, Role, Ticket, TicketImage, User } from "@/lib/types";
 
 export type NewTicketInput = {
@@ -84,7 +86,9 @@ export async function createTicketAction(input: NewTicketInput): Promise<Ticket>
   });
 
   console.log("[actions/tickets][createTicketAction] END", { ticketId: ticket.id });
-  return mapDbTicketToTicket(ticket);
+  const createdTicket = mapDbTicketToTicket(ticket);
+  after(() => lineNewTicket(createdTicket));
+  return createdTicket;
 }
 
 export async function acceptTicketAction(ticketId: string): Promise<AcceptTicketResult> {
@@ -136,6 +140,9 @@ export async function acceptTicketAction(ticketId: string): Promise<AcceptTicket
           ticket,
         };
 
+  if (count === 1) {
+    after(() => lineStatusToRequester(ticket, "✅ ช่างรับงานแจ้งซ่อมของคุณแล้ว", [`ช่างผู้รับผิดชอบ: ${session.name}`]));
+  }
   console.log("[actions/tickets][acceptTicketAction] END", { ticketId, result: { success: result.success } });
   return result;
 }
@@ -159,7 +166,9 @@ export async function startProgressAction(ticketId: string): Promise<Ticket> {
     },
     include: ticketInclude,
   });
-  return mapDbTicketToTicket(updated);
+  const result = mapDbTicketToTicket(updated);
+  after(() => lineStatusToRequester(result, "🛠️ ช่างกำลังดำเนินการซ่อม", [`ช่างผู้รับผิดชอบ: ${session.name}`]));
+  return result;
 }
 
 export async function completeTicketAction(
@@ -194,7 +203,14 @@ export async function completeTicketAction(
       include: ticketInclude,
     });
   });
-  return mapDbTicketToTicket(updated);
+  const result = mapDbTicketToTicket(updated);
+  after(() =>
+    lineStatusToRequester(result, "🎉 งานซ่อมเสร็จเรียบร้อยแล้ว", [
+      `ช่างผู้รับผิดชอบ: ${session.name}`,
+      ...(note.trim() ? [`หมายเหตุการซ่อม: ${note.trim().slice(0, 300)}`] : []),
+    ])
+  );
+  return result;
 }
 
 export async function assignTechnicianAction(ticketId: string, technicianId: string): Promise<Ticket> {
@@ -225,7 +241,12 @@ export async function assignTechnicianAction(ticketId: string, technicianId: str
     },
     include: ticketInclude,
   });
-  return mapDbTicketToTicket(updated);
+  const result = mapDbTicketToTicket(updated);
+  after(async () => {
+    await lineToTechnician(result, "📋 คุณได้รับมอบหมายงานซ่อม", [`มอบหมายโดย: ${session.name}`], session.id);
+    await lineStatusToRequester(result, "✅ งานแจ้งซ่อมของคุณมีช่างผู้รับผิดชอบแล้ว", [`ช่างผู้รับผิดชอบ: ${technician.name}`], session.id);
+  });
+  return result;
 }
 
 export async function updateCategoryAction(ticketId: string, categoryId: CategoryId): Promise<Ticket> {
@@ -294,7 +315,13 @@ export async function cancelTicketAction(ticketId: string, reason: string): Prom
     },
     include: ticketInclude,
   });
-  return mapDbTicketToTicket(updated);
+  const result = mapDbTicketToTicket(updated);
+  const cancelInfo = [`ยกเลิกโดย: ${session.name}`, `เหตุผล: ${trimmedReason.slice(0, 300)}`];
+  after(async () => {
+    await lineStatusToRequester(result, "❌ งานแจ้งซ่อมถูกยกเลิก", cancelInfo, session.id);
+    await lineToTechnician(result, "❌ งานซ่อมที่คุณรับผิดชอบถูกยกเลิก", cancelInfo, session.id);
+  });
+  return result;
 }
 
 // Permanent delete — unlike cancelTicketAction (marks the ticket CANCELLED but keeps the full

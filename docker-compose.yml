@@ -50,6 +50,9 @@ services:
       AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:?Set AUTH_GOOGLE_ID in .env}
       AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:?Set AUTH_GOOGLE_SECRET in .env}
       AUTH_URL: ${AUTH_URL:-}
+      # Optional LINE notifications via the RMU LINE Notification gateway (lib/line-noti.ts).
+      LINE_NOTI_URL: ${LINE_NOTI_URL:-}
+      LINE_NOTI_API_KEY: ${LINE_NOTI_API_KEY:-}
     ports:
       - "3000:3000"
     volumes:

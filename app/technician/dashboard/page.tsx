@@ -2,6 +2,7 @@
 
 import { CheckCircle2, Inbox, Wrench } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import LineNotifyCard from "@/components/LineNotifyCard";
 import Button from "@/components/Button";
 import DashboardCard from "@/components/DashboardCard";
 import EmptyState from "@/components/EmptyState";
@@ -29,6 +30,8 @@ export default function TechnicianDashboardPage() {
           </h2>
           <p className="text-sm text-[var(--text-secondary)]">งานซ่อมที่รอดำเนินการของคุณวันนี้</p>
         </div>
+
+        <LineNotifyCard audience="technician" />
 
         <div className="grid gap-4 sm:grid-cols-3">
           <DashboardCard label="งานใหม่" value={newJobs.length} icon={Inbox} accentVar="--status-pending" />

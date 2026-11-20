@@ -5,9 +5,11 @@ import {
   appBaseUrl,
   createLinkSession,
   getActiveSubscription,
+  getAllActiveSubscriptions,
   getLinkSession,
   lineNotiEnabled,
   revokeSubscription,
+  sendLineText,
 } from "@/lib/line-noti";
 
 export interface LineStatus {
@@ -83,6 +85,31 @@ export async function confirmLineLinkAction(sessionId: string): Promise<LineActi
   return done
     ? { ok: true, message: "เปิดรับการแจ้งเตือนผ่าน LINE เรียบร้อยแล้ว" }
     : { ok: false, message: "ยังไม่ได้สมัครรับการแจ้งเตือน กรุณากดปุ่มอีกครั้ง" };
+}
+
+/** Admin-only: sends one text message to every user in the system currently subscribed to LINE. */
+export async function broadcastLineNotificationAction(text: string): Promise<LineActionResult> {
+  const user = await sessionUser();
+  console.log("[actions/line][broadcastLineNotificationAction] START", { by: user.id, role: user.role });
+  if (user.role !== "admin") throw new Error("เฉพาะผู้ดูแลระบบเท่านั้นที่ส่งการแจ้งเตือนได้");
+
+  const trimmed = text.trim();
+  if (!trimmed) return { ok: false, message: "กรุณากรอกข้อความแจ้งเตือน" };
+  if (!lineNotiEnabled()) return { ok: false, message: "ยังไม่ได้เปิดใช้การแจ้งเตือนผ่าน LINE" };
+
+  const subs = await getAllActiveSubscriptions();
+  if (!subs.ok) {
+    console.error("[actions/line][broadcastLineNotificationAction] ERROR", { by: user.id, subs });
+    return { ok: false, message: RETRY };
+  }
+  const recipients = (subs.data ?? []).map((s) => s.userRef);
+  if (recipients.length === 0) return { ok: false, message: "ยังไม่มีผู้ใช้งานที่เปิดรับการแจ้งเตือนผ่าน LINE" };
+
+  const result = await sendLineText(recipients, trimmed, `broadcast-${Date.now()}`);
+  console.log("[actions/line][broadcastLineNotificationAction] END", { by: user.id, ok: result.ok, recipients: recipients.length });
+  return result.ok
+    ? { ok: true, message: `ส่งการแจ้งเตือนถึงผู้ใช้งาน ${recipients.length} คนแล้ว` }
+    : { ok: false, message: RETRY };
 }
 
 export async function unlinkLineAction(): Promise<LineActionResult> {

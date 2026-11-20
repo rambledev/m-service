@@ -103,6 +103,14 @@ export async function getActiveSubscription(userRef: string) {
   return { ok: true as const, data: active };
 }
 
+/** Every user in the system currently subscribed to LINE notifications (any role). */
+export async function getAllActiveSubscriptions() {
+  console.log(`${TAG}[getAllActiveSubscriptions] START`);
+  const result = await call<Subscription[]>("GET", "/v1/subscriptions?status=ACTIVE");
+  console.log(`${TAG}[getAllActiveSubscriptions] END`, { ok: result.ok, count: result.ok ? result.data?.length : 0 });
+  return result;
+}
+
 export async function revokeSubscription(userRef: string) {
   console.log(`${TAG}[revokeSubscription] START`, { userRef });
   const result = await call<unknown>("DELETE", `/v1/subscriptions/${encodeURIComponent(userRef)}`, {
@@ -119,7 +127,7 @@ export async function revokeSubscription(userRef: string) {
 export async function sendLineText(userRefs: string[], text: string, clientReference?: string) {
   const recipients = [...new Set(userRefs.filter(Boolean))];
   console.log(`${TAG}[sendLineText] START`, { recipients: recipients.length, clientReference });
-  if (recipients.length === 0) return;
+  if (recipients.length === 0) return { ok: false as const, status: 0, code: "NO_RECIPIENTS" };
   const result = await call<{ id: string }>("POST", "/v1/notifications", {
     recipients: recipients.map((userRef) => ({ userRef })),
     messages: [{ type: "text", text: text.slice(0, 5000) }],
@@ -127,4 +135,5 @@ export async function sendLineText(userRefs: string[], text: string, clientRefer
   });
   if (!result.ok) console.error(`${TAG}[sendLineText] ERROR`, { code: result.code, status: result.status, clientReference });
   console.log(`${TAG}[sendLineText] END`, { ok: result.ok });
+  return result;
 }

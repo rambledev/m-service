@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  BellRing,
   ClipboardList,
   History,
   Home,
@@ -46,5 +47,6 @@ export const navByRole: Record<Role, NavItem[]> = {
     { label: "สรุปข้อมูล", shortLabel: "สรุปข้อมูล", href: "/admin/summary", icon: TrendingUp },
     { label: "จัดการผู้ใช้งาน", shortLabel: "ผู้ใช้งาน", href: "/admin/users", icon: Users },
     { label: "รายงาน", shortLabel: "รายงาน", href: "/admin/reports", icon: BarChart3 },
+    { label: "ส่งการแจ้งเตือน", shortLabel: "แจ้งเตือน", href: "/admin/notify", icon: BellRing },
   ],
 };

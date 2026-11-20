@@ -1,12 +1,14 @@
 "use client";
 
-import { CheckCircle2, ClipboardList, Clock, Inbox, Wrench, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CheckCircle2, ClipboardList, Clock, Inbox, UserCheck, UserPlus, Users, Wrench, XCircle } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import Button from "@/components/Button";
 import DashboardCard from "@/components/DashboardCard";
 import EmptyState from "@/components/EmptyState";
 import TicketCard from "@/components/TicketCard";
 import { useApp } from "@/context/AppContext";
+import { getUserStatsAction, UserStats } from "@/app/actions/stats";
 
 export default function AdminDashboardPage() {
   const { tickets } = useApp();
@@ -19,6 +21,13 @@ export default function AdminDashboardPage() {
 
   const recent = [...tickets].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1)).slice(0, 6);
 
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  useEffect(() => {
+    getUserStatsAction()
+      .then(setUserStats)
+      .catch((error) => console.error("[AdminDashboardPage][getUserStatsAction] ERROR", { error }));
+  }, []);
+
   return (
     <AppShell role="admin" title="แดชบอร์ดผู้ดูแลระบบ">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -28,6 +37,16 @@ export default function AdminDashboardPage() {
           <DashboardCard label="กำลังซ่อม" value={inProgress} icon={Wrench} accentVar="--status-progress" />
           <DashboardCard label="เสร็จสิ้น" value={completed} icon={CheckCircle2} accentVar="--status-completed" />
           <DashboardCard label="ยกเลิก" value={cancelled} icon={XCircle} accentVar="--status-critical" />
+        </div>
+
+        <div>
+          <h2 className="mb-3 text-sm font-semibold text-[var(--text-secondary)]">สถิติผู้ใช้งาน</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <DashboardCard label="ผู้ใช้งานทั้งหมด" value={userStats?.total ?? "—"} icon={Users} />
+            <DashboardCard label="ใช้งานใน 24 ชม." value={userStats?.active24h ?? "—"} icon={UserCheck} accentVar="--status-good" />
+            <DashboardCard label="ใช้งานใน 7 วัน" value={userStats?.active7d ?? "—"} icon={UserCheck} accentVar="--status-accepted" />
+            <DashboardCard label="ผู้ใช้ใหม่ (30 วัน)" value={userStats?.newUsers30d ?? "—"} icon={UserPlus} accentVar="--status-progress" />
+          </div>
         </div>
 
         <div>

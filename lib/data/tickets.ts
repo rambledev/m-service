@@ -139,6 +139,8 @@ export function mapDbUserToUser(u: {
   department: string | null;
   phone: string | null;
   expertise: string[];
+  createdAt: Date;
+  lastLoginAt: Date | null;
 }): User {
   return {
     id: u.id,
@@ -148,6 +150,8 @@ export function mapDbUserToUser(u: {
     phone: u.phone ?? undefined,
     email: u.id,
     expertise: u.expertise.length > 0 ? u.expertise : undefined,
+    createdAt: u.createdAt.toISOString(),
+    lastLoginAt: u.lastLoginAt?.toISOString(),
   };
 }
 

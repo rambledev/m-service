@@ -32,8 +32,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // sign-in so it can't be changed via the admin role-assignment UI.
         await prisma.user.upsert({
           where: { id: email },
-          create: { id: email, name, role: roleToDb[pinnedRole] },
-          update: { name, role: roleToDb[pinnedRole] },
+          create: { id: email, name, role: roleToDb[pinnedRole], lastLoginAt: new Date() },
+          update: { name, role: roleToDb[pinnedRole], lastLoginAt: new Date() },
         });
       } else {
         // Any other @rmu.ac.th account: default to "requester" the first time it signs in.
@@ -42,8 +42,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // a later sign-in must not silently reset that back to requester.
         await prisma.user.upsert({
           where: { id: email },
-          create: { id: email, name, role: "REQUESTER" },
-          update: { name },
+          create: { id: email, name, role: "REQUESTER", lastLoginAt: new Date() },
+          update: { name, lastLoginAt: new Date() },
         });
       }
 

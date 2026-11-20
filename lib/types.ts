@@ -8,6 +8,8 @@ export interface User {
   phone?: string;
   email?: string;
   expertise?: string[];
+  createdAt?: string;
+  lastLoginAt?: string;
 }
 
 export type CategoryId =
